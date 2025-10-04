@@ -80,22 +80,6 @@ export default function Form() {
   const isFirstStep = currentStep === 0;
   const canProceed = formData[currentField]?.trim() !== "";
 
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && canProceed) {
-        e.preventDefault();
-        if (isLastStep) {
-          handleSubmit();
-        } else {
-          nextStep();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [canProceed, isLastStep, currentStep, formData]);
-
   const handleInputChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -260,6 +244,22 @@ export default function Form() {
       }, 2000);
     }
   };
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && canProceed) {
+        e.preventDefault();
+        if (isLastStep) {
+          handleSubmit();
+        } else {
+          nextStep();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [canProceed, isLastStep, currentStep, formData, handleSubmit, nextStep]);
 
   if (generating) {
     return (

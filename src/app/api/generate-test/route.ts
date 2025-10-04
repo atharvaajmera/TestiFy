@@ -69,16 +69,16 @@ Example structure:
   return text.trim();
 }
 
-function validateLatexStructure(latex: string): boolean {
-  const hasDocumentClass = latex.includes('\\documentclass');
-  const hasBeginDocument = latex.includes('\\begin{document}');
-  const hasEndDocument = latex.includes('\\end{document}');
+// function validateLatexStructure(latex: string): boolean {
+//   const hasDocumentClass = latex.includes('\\documentclass');
+//   const hasBeginDocument = latex.includes('\\begin{document}');
+//   const hasEndDocument = latex.includes('\\end{document}');
   
-  const beginEnumerate = (latex.match(/\\begin\{enumerate\}/g) || []).length;
-  const endEnumerate = (latex.match(/\\end\{enumerate\}/g) || []).length;
+//   const beginEnumerate = (latex.match(/\\begin\{enumerate\}/g) || []).length;
+//   const endEnumerate = (latex.match(/\\end\{enumerate\}/g) || []).length;
   
-  return hasDocumentClass && hasBeginDocument && hasEndDocument && (beginEnumerate === endEnumerate);
-}
+//   return hasDocumentClass && hasBeginDocument && hasEndDocument && (beginEnumerate === endEnumerate);
+// }
 
 export async function POST(request: NextRequest) {
   try {
@@ -95,10 +95,11 @@ export async function POST(request: NextRequest) {
       latexCode: latexCode
     });
 
-  } catch (error:any) {
+  } catch (error:unknown) {
     console.error("Error generating test:", error);
+    const errorMessage = (error instanceof Error) ? error.message : String(error);
     
-    if (error.message.includes("temporarily unavailable")) {
+    if (errorMessage.includes("temporarily unavailable")) {
       return NextResponse.json({
         success: false,
         message: "The AI service is temporarily unavailable. Please try again in a few minutes.",
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: false,
-      message: error.message || "Failed to generate test paper",
+      message: errorMessage || "Failed to generate test paper",
       error: "GENERATION_FAILED"
     }, { status: 500 });
   }
