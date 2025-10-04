@@ -42,25 +42,34 @@ Difficulty Level: ${formData.difficulty}
 
 CRITICAL REQUIREMENTS:
 1. Output ONLY valid LaTeX code - no explanations, no markdown formatting, no code blocks and the latex version should be compatible with the texlive 2016 engine
-2. Start directly with \\documentclass and end with \\end{document}
+2. Start directly with \\\\documentclass and end with \\\\end{document}
 3. Use proper LaTeX syntax that compiles without errors
-4. Ensure every \\begin{enumerate} has a matching \\end{enumerate}
-5. Do not use any markdown formatting like \`\`\`latex or \`\`\`
+4. Ensure every \\\\begin{enumerate} has a matching \\\\end{enumerate}
+5. Do not use any markdown formatting like \\\`\\\`\\\`latex or \\\`\\\`\\\`
 6. The question set should be a mix of different types like (MCQs, short answer, long answer), don't just stick to one format, each paper should have a unique set of problems
 7. The maximum marks should be corresponding to the choosen dificulty level, easy=15, medium=20, hard=30, the difficulty level of the questions should be relevant to the difficulty level of the paper
 8. Include the Name, Class (just like this-> Class-10..not like class-class-10), Subject, Maximum Marks, and the choosen "Difficulty" level in the beggining just like a typical school exam format where the details are given in the top middle and so on, ake care of the spacing and formatting
 
+IMPORTANT FORMATTING RULES for maths QUESTIONS:
+1. Wrap ALL decimal numbers in math mode: \$0.25\$, \$3.45\$, etc.
+2. Use \\\\textrm{Rs.} instead of ₹ symbol
+3. Include these packages:
+   \\\\usepackage{amsmath}
+   \\\\usepackage{amssymb}
+   \\\\usepackage[T1]{fontenc}
+   \\\\usepackage{textcomp}
+
 Example structure:
-\\documentclass{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage{amsmath}
-\\begin{document}
-\\title{${formData.subject} Test}
-\\author{${formData.name}}
-\\date{\\today}
-\\maketitle
+\\\\documentclass{article}
+\\\\usepackage[utf8]{inputenc}
+\\\\usepackage{amsmath}
+\\\\begin{document}
+\\\\title{${formData.subject} Test}
+\\\\author{${formData.name}}
+\\\\date{\\\\today}
+\\\\maketitle
 [content here]
-\\end{document}`;
+\\\\end{document}`;
 
   const result = await model.generateContent(prompt);
   const response = result.response; 

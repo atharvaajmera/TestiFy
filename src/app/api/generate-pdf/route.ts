@@ -63,12 +63,33 @@ export async function POST(request: NextRequest) {
     // Enhanced logging for mobile debugging
     console.log("=== DETAILED LATEX CONTENT ANALYSIS ===");
     console.log("Content length:", body.latexContent.length);
-    console.log("Content preview (first 200 chars):", body.latexContent.substring(0, 200));
-    console.log("Content preview (last 200 chars):", body.latexContent.substring(Math.max(0, body.latexContent.length - 200)));
-    console.log("Character codes (first 50):", Array.from(body.latexContent.substring(0, 50)).map(c => c.charCodeAt(0)).join(','));
-    console.log("Contains backslashes:", body.latexContent.includes('\\'));
-    console.log("Contains curly braces:", body.latexContent.includes('{') && body.latexContent.includes('}'));
-    console.log("Line break type:", body.latexContent.includes('\r\n') ? 'CRLF' : body.latexContent.includes('\n') ? 'LF' : 'None detected');
+    console.log(
+      "Content preview (first 200 chars):",
+      body.latexContent.substring(0, 200)
+    );
+    console.log(
+      "Content preview (last 200 chars):",
+      body.latexContent.substring(Math.max(0, body.latexContent.length - 200))
+    );
+    console.log(
+      "Character codes (first 50):",
+      Array.from(body.latexContent.substring(0, 50))
+        .map((c) => c.charCodeAt(0))
+        .join(",")
+    );
+    console.log("Contains backslashes:", body.latexContent.includes("\\"));
+    console.log(
+      "Contains curly braces:",
+      body.latexContent.includes("{") && body.latexContent.includes("}")
+    );
+    console.log(
+      "Line break type:",
+      body.latexContent.includes("\r\n")
+        ? "CRLF"
+        : body.latexContent.includes("\n")
+        ? "LF"
+        : "None detected"
+    );
     console.log("Full content:");
     console.log(body.latexContent);
     console.log("=====================================");
@@ -86,15 +107,15 @@ export async function POST(request: NextRequest) {
           "import-latex": {
             operation: "import/raw",
             filename: filename,
-            file: body.latexContent, 
+            file: body.latexContent,
           },
           "convert-to-pdf": {
             operation: "convert",
             input: "import-latex",
             output_format: "pdf",
-            engine: "texlive", 
-            engine_version: "2023", 
-            timeout: 600, 
+            engine: "texlive",
+            engine_version: "2023",
+            timeout: 600,
           },
           "export-pdf": {
             operation: "export/url",
@@ -141,7 +162,11 @@ export async function POST(request: NextRequest) {
     const maxAttempts = 60;
     const pollInterval = 2000;
 
-    while (jobStatus !== "finished" && jobStatus !== "error" && attempts < maxAttempts) {
+    while (
+      jobStatus !== "finished" &&
+      jobStatus !== "error" &&
+      attempts < maxAttempts
+    ) {
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
       try {
@@ -158,11 +183,14 @@ export async function POST(request: NextRequest) {
           console.error("Failed to check job status:", statusResponse.status);
           const errorText = await statusResponse.text();
           console.error("Status check error:", errorText);
-          
+
           attempts++;
           if (attempts >= 3) {
             return NextResponse.json(
-              { error: "Failed to check job status repeatedly", details: errorText },
+              {
+                error: "Failed to check job status repeatedly",
+                details: errorText,
+              },
               { status: 500 }
             );
           }
@@ -177,9 +205,12 @@ export async function POST(request: NextRequest) {
           `Job status: ${jobStatus} (attempt ${attempts}/${maxAttempts})`
         );
 
-        statusData.data.tasks.forEach(task => {
+        statusData.data.tasks.forEach((task) => {
           if (task.status === "error") {
-            console.error(`Task ${task.name} failed:`, task.message || "No error message");
+            console.error(
+              `Task ${task.name} failed:`,
+              task.message || "No error message"
+            );
           }
         });
 
@@ -196,8 +227,8 @@ export async function POST(request: NextRequest) {
             const pdfFile = exportTask.result.files[0];
             console.log("PDF generated successfully:", pdfFile.url);
 
-             const pdfResponse = await fetch(pdfFile.url);
-            
+            const pdfResponse = await fetch(pdfFile.url);
+
             if (!pdfResponse.ok) {
               console.error("Failed to download PDF from CloudConvert");
               return NextResponse.json(
@@ -211,16 +242,25 @@ export async function POST(request: NextRequest) {
             return new NextResponse(pdfBuffer, {
               status: 200,
               headers: {
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${pdfFile.filename}"`,
-                'Content-Length': pdfBuffer.byteLength.toString(),
-                'Cache-Control': 'no-cache',
+                "Content-Type": "application/pdf",
+                "Content-Disposition": `inline; filename="${pdfFile.filename}"`, // Changed from 'attachment' to 'inline'
+                "Content-Length": pdfBuffer.byteLength.toString(),
+                "Cache-Control": "no-store, no-cache, must-revalidate",
+                "Access-Control-Allow-Origin": "*", // Add if using different domains
+                "Access-Control-Expose-Headers":
+                  "Content-Disposition, Content-Length",
               },
             });
           } else {
-            console.error("PDF file not found in export task result:", exportTask);
+            console.error(
+              "PDF file not found in export task result:",
+              exportTask
+            );
             return NextResponse.json(
-              { error: "PDF file not found in conversion result", details: exportTask },
+              {
+                error: "PDF file not found in conversion result",
+                details: exportTask,
+              },
               { status: 500 }
             );
           }
@@ -232,15 +272,14 @@ export async function POST(request: NextRequest) {
           );
           console.error("Conversion job failed. Error tasks:", errorTasks);
           return NextResponse.json(
-            { 
-              error: "LaTeX compilation failed", 
+            {
+              error: "LaTeX compilation failed",
               details: errorTasks,
-              allTasks: statusData.data.tasks 
+              allTasks: statusData.data.tasks,
             },
             { status: 500 }
           );
         }
-
       } catch (pollError) {
         console.error("Error during polling:", pollError);
         attempts++;
@@ -254,20 +293,22 @@ export async function POST(request: NextRequest) {
     }
 
     if (jobStatus !== "finished") {
-      console.error("Job did not complete within timeout. Final status:", jobStatus);
+      console.error(
+        "Job did not complete within timeout. Final status:",
+        jobStatus
+      );
       return NextResponse.json(
-        { 
-          error: "Conversion timeout - job took too long to complete", 
+        {
+          error: "Conversion timeout - job took too long to complete",
           finalStatus: jobStatus,
-          attempts: attempts 
+          attempts: attempts,
         },
         { status: 408 }
       );
     }
-
   } catch (error) {
     console.error("Error in LaTeX to PDF conversion:", error);
-    
+
     if (error instanceof Error) {
       console.error("Error name:", error.name);
       console.error("Error message:", error.message);
@@ -275,9 +316,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { 
-        error: "Internal server error during conversion", 
-        details: error instanceof Error ? error.message : String(error)
+      {
+        error: "Internal server error during conversion",
+        details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );

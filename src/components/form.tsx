@@ -218,22 +218,48 @@ export default function Form() {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to generate PDF");
       }
+      
       const block = await response.blob();
-      const url = window.URL.createObjectURL(block);
-      setLoadingMessage("Opening the PDF...");
-      window.open(url, "_blank");
+      
+      // Check if blob is valid
+      if (block.size === 0) {
+        throw new Error("Received empty PDF file");
+      }
+      
+      console.log("PDF blob received, size:", block.size);
+      
+      // Create blob URL
+      const url = window.URL.createObjectURL(new Blob([block], { type: 'application/pdf' }));
+      
+      setLoadingMessage("Preparing download...");
+      
+      // Use a more reliable download approach for mobile
       const a = document.createElement('a');
+      a.style.display = 'none';
       a.href = url;
       a.download = 'test-paper.pdf';
+      
+      // Add to DOM, click, and remove
       document.body.appendChild(a);
-      a.click();
-
+      
+      // Small delay to ensure DOM update
       setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        setGenerating(false);
-        setLoadingMessage("");
-      }, 1000);
+        a.click();
+        
+        // Try opening in new tab as well (for desktop)
+        setTimeout(() => {
+          window.open(url, '_blank');
+        }, 100);
+        
+        // Cleanup after download starts
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          setGenerating(false);
+          setLoadingMessage("");
+          console.log("PDF download complete");
+        }, 2000);
+      }, 100);
 
     } catch (error) {
       console.error("Error generating PDF:", error);
