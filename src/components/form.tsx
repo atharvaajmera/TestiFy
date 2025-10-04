@@ -259,7 +259,7 @@ export default function Form() {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [canProceed, isLastStep, currentStep, formData, handleSubmit, nextStep]);
+  }, [canProceed, isLastStep, currentStep, formData]);
 
   if (generating) {
     return (
