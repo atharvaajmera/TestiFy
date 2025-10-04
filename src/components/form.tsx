@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion } from "motion/react";
 
 export interface FormData {
   name: string;
@@ -21,7 +21,7 @@ const steps = [
     id: 2,
     title: "Which class are you in?",
     field: "class" as keyof FormData,
-    placeholder: "Select your class",
+    placeholder: "Enter your class (e.g., 10th, 12th)",
     type: "select",
     options: [
       { value: "class-6", label: "Class 6" },
@@ -35,7 +35,7 @@ const steps = [
     id: 3,
     title: "What subject?",
     field: "subject" as keyof FormData,
-    placeholder: "Select a subject",
+    placeholder: "Enter subject ",
     type: "select",
     options: [
       { value: "math", label: "Mathematics" },
@@ -48,7 +48,7 @@ const steps = [
     id: 4,
     title: "Which topic?",
     field: "topic" as keyof FormData,
-    placeholder: "Enter a specific topic",
+    placeholder: "Enter specific topic",
     type: "input",
   },
   {
@@ -68,7 +68,6 @@ export default function Form() {
   const [currentStep, setCurrentStep] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
   const [formData, setFormData] = useState<FormData>({
     name: "",
     class: "",
@@ -76,7 +75,6 @@ export default function Form() {
     topic: "",
     difficulty: "",
   });
-
   const currentField = steps[currentStep]?.field;
   const isLastStep = currentStep === steps.length - 1;
   const isFirstStep = currentStep === 0;
@@ -89,144 +87,161 @@ export default function Form() {
     }));
   };
 
-  const nextStep = useCallback(() => {
+  const nextStep = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     }
-  }, [currentStep]);
+  };
 
   const prevStep = () => {
     if (!isFirstStep) {
       setCurrentStep((prev) => prev - 1);
     }
   };
-  
-  const generatePDF = async (latexCode: string) => {
-    setLoadingMessage("Converting to PDF...");
-    const response = await fetch("/api/generate-pdf", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        latexContent: latexCode,
-        filename: "test-paper.tex",
-      }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate PDF file.");
-    }
-
-    const data = await response.json();
-    if (!data.downloadUrl) {
-        throw new Error("Could not get the download link for the PDF.");
-    }
-    
-    setLoadingMessage("Opening PDF...");
-    // Open the download link in a new tab. This is mobile-friendly.
-    window.open(data.downloadUrl, '_blank');
-  };
-
-  const handleSubmit = useCallback(async () => {
-    setGenerating(true);
-    setErrorMessage("");
-    setLoadingMessage("Generating test questions...");
-
-    try {
-      const testResponse = await fetch("/api/generate-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const testData = await testResponse.json();
-      if (!testData.success) {
-        throw new Error(testData.message || "Failed to generate test questions.");
-      }
-      
-      const fullResponseString = testData.latexCode;
-      const regex = /```latex\n([\s\S]*?)\n```/;
-      const match = fullResponseString.match(regex);
-      const extractedLatex = match ? match[1] : fullResponseString;
-
-      await generatePDF(extractedLatex);
-
-      // Reset form only after everything is successful
-      setLoadingMessage("Done!");
-      setTimeout(() => {
-        setFormData({ name: "", class: "", subject: "", topic: "", difficulty: "" });
-        setCurrentStep(0);
-      }, 1000);
-
-    } catch (error: unknown) {
-      console.error("An error occurred:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      setErrorMessage(errorMessage || "An unknown error occurred. Please try again.");
-    } finally {
-        // Centralized loading state management
-        setTimeout(() => {
-             setGenerating(false);
-             setLoadingMessage("");
-        }, 2000); // Give user time to see final message
-    }
-  }, [formData]);
 
   const renderInputField = () => {
     const step = steps[currentStep];
-    switch (step.type) {
-      case "input":
-        return (
-          <input
-            type="text"
-            name={step.field}
-            placeholder={step.placeholder}
-            value={formData[step.field]}
-            onChange={(e) => handleInputChange(e.target.value)}
-            className="p-2 border border-gray-300 rounded-lg text-black bg-white w-full"
-            required
-            autoFocus
-          />
-        );
-      case "select":
-        return (
-          <select
-            name={step.field}
-            value={formData[step.field]}
-            onChange={(e) => handleInputChange(e.target.value)}
-            className="p-2 border border-gray-300 rounded-lg text-black bg-white w-full"
-            required
-          >
-            <option value="">{step.placeholder}</option>
-            {step.options?.map((option) => (
-              <option key={option.value} value={option.value}>
+    if (step.type === "input") {
+      return (
+        <input
+          type="text"
+          name={step.field}
+          placeholder={step.placeholder}
+          value={formData[step.field]}
+          onChange={(e) => handleInputChange(e.target.value)}
+          className="p-2 border border-gray-300 rounded-lg text-black bg-white w-full"
+          required
+        />
+      );
+    } else if (step.type === "select") {
+      return (
+        <select
+          name={step.field}
+          value={formData[step.field]}
+          onChange={(e) => handleInputChange(e.target.value)}
+          className="p-2 border border-gray-300 rounded-lg text-black bg-white w-full"
+          required
+        >
+          <option value="">{step.placeholder}</option>
+          {step.options?.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      );
+    } else if (step.type === "radio") {
+      return (
+        <div className="flex justify-between mt-2 w-full">
+          {step.options?.map((option) => (
+            <div key={option.value} className="flex items-center">
+              <input
+                type="radio"
+                id={option.value}
+                name={step.field}
+                value={option.value}
+                checked={formData[step.field] === option.value}
+                onChange={(e) => handleInputChange(e.target.value)}
+                required
+              />
+              <label htmlFor={option.value} className="ml-2">
                 {option.label}
-              </option>
-            ))}
-          </select>
-        );
-      case "radio":
-        return (
-          <div className="flex justify-around mt-2 w-full">
-            {step.options?.map((option) => (
-              <div key={option.value} className="flex items-center">
-                <input
-                  type="radio"
-                  id={option.value}
-                  name={step.field}
-                  value={option.value}
-                  checked={formData[step.field] === option.value}
-                  onChange={(e) => handleInputChange(e.target.value)}
-                  required
-                />
-                <label htmlFor={option.value} className="ml-2">
-                  {option.label}
-                </label>
-              </div>
-            ))}
-          </div>
-        );
-      default:
-        return null;
+              </label>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const handleSubmit = async () => {
+    setGenerating(true);
+    setLoadingMessage("Generating the test questions...");
+    try {
+      const response = await fetch("/api/generate-test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || "Failed to generate test");
+      }
+
+      console.log("Latex generated from gemini", data.latexCode);
+      const fullResponseString = data.latexCode;
+      const regex = /```latex\n([\s\S]*?)\n```/;
+      const match = fullResponseString.match(regex);
+      const extractedLatex = match ? match[1] : fullResponseString;
+      console.log(
+        "Cleaned LaTeX to be sent for PDF conversion:",
+        extractedLatex
+      );
+      setLoadingMessage("Converting to PDF...");
+      await generatePDF(extractedLatex);
+      setFormData({
+        name: "",
+        class: "",
+        subject: "",
+        topic: "",
+        difficulty: "",
+      });
+      setCurrentStep(0);
+    } catch (error) {
+      console.error("Error generating test:", error);
+      setLoadingMessage("Error generating test. Please try again.");
+      setTimeout(() => setGenerating(false), 2000);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const generatePDF = async (latexCode: string) => {
+    try {
+      const response = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          latexContent: latexCode,
+          filename: "test-paper.tex",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate PDF");
+      }
+      const block = await response.blob();
+      const url = window.URL.createObjectURL(block);
+      setLoadingMessage("Opening the PDF...");
+      window.open(url, "_blank");
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'test-paper.pdf';
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setGenerating(false);
+        setLoadingMessage("");
+      }, 1000);
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      setLoadingMessage("Error generating PDF. Please try again.");
+      setTimeout(() => {
+        setGenerating(false);
+        setLoadingMessage("");
+      }, 2000);
     }
   };
 
@@ -235,7 +250,7 @@ export default function Form() {
       if (e.key === "Enter" && canProceed) {
         e.preventDefault();
         if (isLastStep) {
-          void handleSubmit();
+          handleSubmit();
         } else {
           nextStep();
         }
@@ -244,45 +259,33 @@ export default function Form() {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [canProceed, isLastStep, nextStep, handleSubmit]);
+  }, [canProceed, isLastStep, currentStep, formData]);
 
   if (generating) {
     return (
-      <div className="fixed inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-gray-100 bg-opacity-50 flex items-center justify-center z-50">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 text-center"
+          className="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4"
         >
-          {!errorMessage ? (
-            <>
-              <motion.div
-                className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
-              <h3 className="mt-6 text-xl font-semibold text-gray-800">
-                {loadingMessage}
-              </h3>
-              <p className="mt-2 text-sm text-gray-600">
-                This may take a few moments...
-              </p>
-            </>
-          ) : (
-             <>
-                <h3 className="text-xl font-semibold text-red-600">
-                    An Error Occurred
-                </h3>
-                <p className="mt-2 text-sm text-gray-600 bg-red-50 p-3 rounded-lg">
-                    {errorMessage}
-                </p>
-             </>
-          )}
+          <div className="flex flex-col items-center">
+            <motion.div
+              className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+            <h3 className="mt-6 text-xl font-semibold text-gray-800">
+              {loadingMessage}
+            </h3>
+            <p className="mt-2 text-sm text-gray-600 text-center">
+              This may take a few moments...
+            </p>
+          </div>
         </motion.div>
       </div>
     );
   }
-
   return (
     <div className="flex flex-col items-center justify-center mt-10">
       <div className="w-full max-w-md mb-8">
@@ -290,9 +293,8 @@ export default function Form() {
           {steps.map((_, index) => (
             <div
               key={index}
-              className={`w-3 h-3 rounded-full transition-colors ${
-                index <= currentStep ? "bg-indigo-600" : "bg-gray-300"
-              }`}
+              className={`w-3 h-3 rounded-full transition-colors ${index <= currentStep ? "bg-indigo-600" : "bg-gray-300"
+                }`}
             />
           ))}
         </div>
@@ -313,11 +315,10 @@ export default function Form() {
             type="button"
             onClick={prevStep}
             disabled={isFirstStep}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              isFirstStep
+            className={`px-4 py-2 rounded-lg transition-colors ${isFirstStep
                 ? "text-gray-400 cursor-not-allowed"
                 : "text-gray-600 hover:bg-gray-100"
-            }`}
+              }`}
           >
             Back
           </button>
@@ -326,11 +327,10 @@ export default function Form() {
             type="button"
             onClick={isLastStep ? handleSubmit : nextStep}
             disabled={!canProceed}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-              !canProceed
+            className={`px-6 py-3 rounded-lg font-semibold transition-colors ${!canProceed
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-indigo-600 text-white hover:bg-indigo-700"
-            }`}
+              }`}
           >
             {isLastStep ? "Generate Test" : "Next"}
           </button>
