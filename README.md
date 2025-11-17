@@ -34,3 +34,4 @@ https://testi-fy.vercel.app/
 Features to incorporate in next commit- 
 1. Change name of the generated PDF each time to enable auto download on mobiles.
 2. Provide an option to download the PDF for solutions.
+3. Include quiz generator, if the user wants to attempt the test online.
