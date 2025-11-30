@@ -218,39 +218,42 @@ export default function Form() {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to generate PDF");
       }
-      
+
       const block = await response.blob();
-      
+
       // Check if blob is valid
       if (block.size === 0) {
         throw new Error("Received empty PDF file");
       }
-      
+
       console.log("PDF blob received, size:", block.size);
-      
+
       // Create blob URL
       const url = window.URL.createObjectURL(new Blob([block], { type: 'application/pdf' }));
-      
+
       setLoadingMessage("Preparing download...");
-      
+
+      const timestamp = Date.now();
+      const uniqueFilename = `test-paper-${timestamp}.pdf`;
+
       // Use a more reliable download approach for mobile
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = 'test-paper.pdf';
-      
+      a.download = uniqueFilename;
+
       // Add to DOM, click, and remove
       document.body.appendChild(a);
-      
+
       // Small delay to ensure DOM update
       setTimeout(() => {
         a.click();
-        
+
         // Try opening in new tab as well (for desktop)
         setTimeout(() => {
           window.open(url, '_blank');
         }, 100);
-        
+
         // Cleanup after download starts
         setTimeout(() => {
           document.body.removeChild(a);
@@ -342,8 +345,8 @@ export default function Form() {
             onClick={prevStep}
             disabled={isFirstStep}
             className={`px-4 py-2 rounded-lg transition-colors ${isFirstStep
-                ? "text-gray-400 cursor-not-allowed"
-                : "text-gray-600 hover:bg-gray-100"
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-gray-600 hover:bg-gray-100"
               }`}
           >
             Back
@@ -354,8 +357,8 @@ export default function Form() {
             onClick={isLastStep ? handleSubmit : nextStep}
             disabled={!canProceed}
             className={`px-6 py-3 rounded-lg font-semibold transition-colors ${!canProceed
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-indigo-600 text-white hover:bg-indigo-700"
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-indigo-600 text-white hover:bg-indigo-700"
               }`}
           >
             {isLastStep ? "Generate Test" : "Next"}

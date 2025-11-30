@@ -32,10 +32,6 @@ interface CloudConvertJobResponse {
   };
 }
 
-// interface CloudConvertTaskResponse {
-//   data: CloudConvertTask;
-// }
-
 export async function POST(request: NextRequest) {
   try {
     const API_KEY = process.env.CLOUDCONVERT_API_KEY;
