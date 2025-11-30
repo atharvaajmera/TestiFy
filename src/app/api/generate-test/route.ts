@@ -18,37 +18,56 @@ export interface FormInputProps {
 }
 
 export async function GET() {
-  return NextResponse.json({ 
+  return NextResponse.json({
     message: "API route is working!",
-    success: true 
+    success: true,
   });
 }
 
-async function generateTestLatexcode(formData: FormInputProps): Promise<string> {
+interface GeneratedTest {
+  questionsLatex: string;
+  solutionsLatex: string;
+}
+
+async function generateTestLatexcode(
+  formData: FormInputProps
+): Promise<GeneratedTest> {
   const model = ai.getGenerativeModel({
     model: "gemini-2.0-flash",
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 4096,
     },
   });
 
-  const prompt = `Generate LaTeX code for a test paper with the following parameters:
+  const prompt = `Generate LaTeX code for a test paper AND its solution key with the following parameters:
 Name: ${formData.name}
 Class: ${formData.class}
 Subject: ${formData.subject}
 Topic: ${formData.topic}
 Difficulty Level: ${formData.difficulty}
 
-CRITICAL REQUIREMENTS:
+YOU MUST OUTPUT TWO SEPARATE LATEX DOCUMENTS:
+1. First, output the QUESTION PAPER
+2. Then output exactly this separator on its own line: %%%SOLUTIONS_SEPARATOR%%%
+3. Then output the SOLUTION KEY for all the questions
+
+CRITICAL REQUIREMENTS FOR BOTH DOCUMENTS:
 1. Output ONLY valid LaTeX code - no explanations, no markdown formatting, no code blocks and the latex version should be compatible with the texlive 2016 engine
-2. Start directly with \\\\documentclass and end with \\\\end{document}
+2. Each document must start with \\\\documentclass and end with \\\\end{document}
 3. Use proper LaTeX syntax that compiles without errors
 4. Ensure every \\\\begin{enumerate} has a matching \\\\end{enumerate}
 5. Do not use any markdown formatting like \\\`\\\`\\\`latex or \\\`\\\`\\\`
 6. The question set should be a mix of different types like (MCQs, short answer, long answer), don't just stick to one format, each paper should have a unique set of problems
 7. The maximum marks should be corresponding to the choosen dificulty level, easy=15, medium=20, hard=30, the difficulty level of the questions should be relevant to the difficulty level of the paper
-8. Include the Name, Class (just like this-> Class-10..not like class-class-10), Subject, Maximum Marks, and the choosen "Difficulty" level in the beggining just like a typical school exam format where the details are given in the top middle and so on, ake care of the spacing and formatting
+8. Include the Name, Class (just like this-> Class-10..not like class-class-10), Subject, Maximum Marks, and the choosen "Difficulty" level in the beggining just like a typical school exam format where the details are given in the top middle and so on, take care of the spacing and formatting
+
+FOR THE SOLUTION KEY:
+1. Title it as "Solution Key" instead of "Test"
+2. Include the same header info (Name, Class, Subject, etc.)
+3. List each question number with its complete solution/answer
+4. For MCQs, show the correct option with brief explanation
+5. For numerical problems, show step-by-step working
 
 IMPORTANT FORMATTING RULES for maths QUESTIONS:
 1. Wrap ALL decimal numbers in math mode: \$0.25\$, \$3.45\$, etc.
@@ -59,7 +78,7 @@ IMPORTANT FORMATTING RULES for maths QUESTIONS:
    \\\\usepackage[T1]{fontenc}
    \\\\usepackage{textcomp}
 
-Example structure:
+Example structure for each document:
 \\\\documentclass{article}
 \\\\usepackage[utf8]{inputenc}
 \\\\usepackage{amsmath}
@@ -69,57 +88,79 @@ Example structure:
 \\\\date{\\\\today}
 \\\\maketitle
 [content here]
+\\\\end{document}
+
+%%%SOLUTIONS_SEPARATOR%%%
+
+\\\\documentclass{article}
+...solution key document...
 \\\\end{document}`;
 
   const result = await model.generateContent(prompt);
-  const response = result.response; 
-  const text = response.text();
+  const response = result.response;
+  const text = response.text().trim();
 
-  return text.trim();
+  // Split the response into questions and solutions
+  const parts = text.split("%%%SOLUTIONS_SEPARATOR%%%");
+
+  return {
+    questionsLatex: parts[0]?.trim() || "",
+    solutionsLatex: parts[1]?.trim() || "",
+  };
 }
 
 // function validateLatexStructure(latex: string): boolean {
 //   const hasDocumentClass = latex.includes('\\documentclass');
 //   const hasBeginDocument = latex.includes('\\begin{document}');
 //   const hasEndDocument = latex.includes('\\end{document}');
-  
+
 //   const beginEnumerate = (latex.match(/\\begin\{enumerate\}/g) || []).length;
 //   const endEnumerate = (latex.match(/\\end\{enumerate\}/g) || []).length;
-  
+
 //   return hasDocumentClass && hasBeginDocument && hasEndDocument && (beginEnumerate === endEnumerate);
 // }
 
 export async function POST(request: NextRequest) {
   try {
     const formData: FormInputProps = await request.json();
-    
+
     console.log("Received form data:", formData);
-    
-    const latexCode = await generateTestLatexcode(formData);
-    
-    console.log("Generated LaTeX code:", latexCode);
+
+    const { questionsLatex, solutionsLatex } = await generateTestLatexcode(
+      formData
+    );
+
+    console.log("Generated Questions LaTeX:", questionsLatex.substring(0, 200));
+    console.log("Generated Solutions LaTeX:", solutionsLatex.substring(0, 200));
 
     return NextResponse.json({
       success: true,
-      latexCode: latexCode
+      questionsLatex,
+      solutionsLatex,
     });
-
-  } catch (error:unknown) {
+  } catch (error: unknown) {
     console.error("Error generating test:", error);
-    const errorMessage = (error instanceof Error) ? error.message : String(error);
-    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
     if (errorMessage.includes("temporarily unavailable")) {
-      return NextResponse.json({
-        success: false,
-        message: "The AI service is temporarily unavailable. Please try again in a few minutes.",
-        error: "SERVICE_UNAVAILABLE"
-      }, { status: 503 });
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "The AI service is temporarily unavailable. Please try again in a few minutes.",
+          error: "SERVICE_UNAVAILABLE",
+        },
+        { status: 503 }
+      );
     }
-    
-    return NextResponse.json({
-      success: false,
-      message: errorMessage || "Failed to generate test paper",
-      error: "GENERATION_FAILED"
-    }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: errorMessage || "Failed to generate test paper",
+        error: "GENERATION_FAILED",
+      },
+      { status: 500 }
+    );
   }
 }

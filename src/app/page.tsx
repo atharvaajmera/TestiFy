@@ -3,6 +3,7 @@ import Form from "@/components/form";
 import { motion, useMotionValue, useMotionTemplate } from "framer-motion";
 import { HeroHighlight, Highlight } from "@/components/ui/hero-highlight";
 import React from "react";
+import Image from "next/image";
 
 export default function Home() {
   const mouseX = useMotionValue(0);
@@ -26,16 +27,16 @@ export default function Home() {
   });
 
   return (
-    <div 
+    <div
       className="relative bg-white dark:bg-black min-h-screen group"
       onMouseMove={handleMouseMove}
     >
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-70" 
+      <div
+        className="absolute inset-0 pointer-events-none opacity-70"
         style={dotPattern('rgb(212 212 212)')}
       />
-      <div 
-        className="absolute inset-0 dark:opacity-70 opacity-0 pointer-events-none" 
+      <div
+        className="absolute inset-0 dark:opacity-70 opacity-0 pointer-events-none"
         style={dotPattern('rgb(38 38 38)')}
       />
       <motion.div
@@ -84,6 +85,8 @@ export default function Home() {
             </motion.h1>
           </HeroHighlight>
         </div>
+        <Image src="/favicon.ico" alt="TestiFy Mockup" width={100} height={100} className="mt- shadow-lg rounded-lg" />
+
 
         <div className="flex flex-col items-center justify-center mt-10 bg-white/80 dark:bg-black/80 backdrop-blur-sm p-6 rounded-lg w-[400px]">
           <Form />

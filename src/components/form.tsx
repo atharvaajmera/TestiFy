@@ -68,6 +68,9 @@ export default function Form() {
   const [currentStep, setCurrentStep] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const [questionsLatex, setQuestionsLatex] = useState<string | null>(null);
+  const [solutionsLatex, setSolutionsLatex] = useState<string | null>(null);
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     class: "",
@@ -157,7 +160,7 @@ export default function Form() {
 
   const handleSubmit = async () => {
     setGenerating(true);
-    setLoadingMessage("Generating the test questions...");
+    setLoadingMessage("Generating test and solutions...");
     try {
       const response = await fetch("/api/generate-test", {
         method: "POST",
@@ -173,35 +176,42 @@ export default function Form() {
         throw new Error(data.message || "Failed to generate test");
       }
 
-      console.log("Latex generated from gemini", data.latexCode);
-      const fullResponseString = data.latexCode;
-      const regex = /```latex\n([\s\S]*?)\n```/;
-      const match = fullResponseString.match(regex);
-      const extractedLatex = match ? match[1] : fullResponseString;
-      console.log(
-        "Cleaned LaTeX to be sent for PDF conversion:",
-        extractedLatex
-      );
-      setLoadingMessage("Converting to PDF...");
-      await generatePDF(extractedLatex);
-      setFormData({
-        name: "",
-        class: "",
-        subject: "",
-        topic: "",
-        difficulty: "",
-      });
-      setCurrentStep(0);
+      console.log("Questions LaTeX received");
+      console.log("Solutions LaTeX received");
+
+      // Clean up the LaTeX (remove markdown code blocks if present)
+      const cleanLatex = (latex: string) => {
+        if (!latex) return '';
+        let cleaned = latex.trim();
+
+        // Remove ```latex at the beginning (with optional whitespace/newline)
+        cleaned = cleaned.replace(/^```latex\s*\n?/i, '');
+
+        // Remove ``` at the end (with optional whitespace/newline)
+        cleaned = cleaned.replace(/\n?```\s*$/i, '');
+
+        return cleaned.trim();
+      };
+
+      const cleanedQuestions = cleanLatex(data.questionsLatex);
+      const cleanedSolutions = cleanLatex(data.solutionsLatex);
+
+      console.log("Cleaned Questions (first 100):", cleanedQuestions.substring(0, 100));
+      console.log("Cleaned Solutions (first 100):", cleanedSolutions.substring(0, 100));
+
+      setQuestionsLatex(cleanedQuestions);
+      setSolutionsLatex(cleanedSolutions);
+      setShowDownloadOptions(true);
+      setGenerating(false);
+      setLoadingMessage("");
     } catch (error) {
       console.error("Error generating test:", error);
       setLoadingMessage("Error generating test. Please try again.");
       setTimeout(() => setGenerating(false), 2000);
-    } finally {
-      setGenerating(false);
     }
   };
 
-  const generatePDF = async (latexCode: string) => {
+  const generatePDF = async (latexCode: string, filePrefix: string) => {
     try {
       const response = await fetch("/api/generate-pdf", {
         method: "POST",
@@ -210,7 +220,7 @@ export default function Form() {
         },
         body: JSON.stringify({
           latexContent: latexCode,
-          filename: "test-paper.tex",
+          filename: `${filePrefix}.tex`,
         }),
       });
 
@@ -231,10 +241,8 @@ export default function Form() {
       // Create blob URL
       const url = window.URL.createObjectURL(new Blob([block], { type: 'application/pdf' }));
 
-      setLoadingMessage("Preparing download...");
-
       const timestamp = Date.now();
-      const uniqueFilename = `test-paper-${timestamp}.pdf`;
+      const uniqueFilename = `${filePrefix}-${timestamp}.pdf`;
 
       // Use a more reliable download approach for mobile
       const a = document.createElement('a');
@@ -258,20 +266,46 @@ export default function Form() {
         setTimeout(() => {
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-          setGenerating(false);
-          setLoadingMessage("");
           console.log("PDF download complete");
         }, 2000);
       }, 100);
 
     } catch (error) {
       console.error("Error generating PDF:", error);
-      setLoadingMessage("Error generating PDF. Please try again.");
-      setTimeout(() => {
-        setGenerating(false);
-        setLoadingMessage("");
-      }, 2000);
+      alert("Error generating PDF. Please try again.");
     }
+  };
+
+  const handleDownloadQuestions = async () => {
+    if (!questionsLatex) return;
+    setGenerating(true);
+    setLoadingMessage("Converting questions to PDF...");
+    await generatePDF(questionsLatex, "test-paper");
+    setGenerating(false);
+    setLoadingMessage("");
+  };
+
+  const handleDownloadSolutions = async () => {
+    if (!solutionsLatex) return;
+    setGenerating(true);
+    setLoadingMessage("Converting solutions to PDF...");
+    await generatePDF(solutionsLatex, "solutions");
+    setGenerating(false);
+    setLoadingMessage("");
+  };
+
+  const handleStartOver = () => {
+    setQuestionsLatex(null);
+    setSolutionsLatex(null);
+    setShowDownloadOptions(false);
+    setFormData({
+      name: "",
+      class: "",
+      subject: "",
+      topic: "",
+      difficulty: "",
+    });
+    setCurrentStep(0);
   };
 
   useEffect(() => {
@@ -315,6 +349,64 @@ export default function Form() {
       </div>
     );
   }
+
+  if (showDownloadOptions) {
+    return (
+      <div className="flex flex-col items-center justify-center mt-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200 w-full max-w-md"
+        >
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Test Generated Successfully!
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Your test paper and solutions are ready to download.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <button
+              onClick={handleDownloadQuestions}
+              className="w-full px-6 py-4 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download Question Paper
+            </button>
+
+            <button
+              onClick={handleDownloadSolutions}
+              className="w-full px-6 py-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Download Solutions
+            </button>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <button
+              onClick={handleStartOver}
+              className="w-full px-4 py-2 text-green-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Generate Another Test
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center mt-10">
       <div className="w-full max-w-md mb-8">
