@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
+import { useRouter } from "next/navigation";
 
 export interface FormData {
   name: string;
@@ -8,6 +9,24 @@ export interface FormData {
   topic: string;
   difficulty: string;
 }
+
+// Export a variable to hold the current form data for use in other components
+export let currentFormData: FormData = {
+  name: "",
+  class: "",
+  subject: "",
+  topic: "",
+  difficulty: "",
+};
+
+// Export quiz questions for use in quiz page
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  answer: string;
+}
+
+export let currentQuizData: QuizQuestion[] = [];
 
 const steps = [
   {
@@ -65,12 +84,13 @@ const steps = [
 ];
 
 export default function Form() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [questionsLatex, setQuestionsLatex] = useState<string | null>(null);
   const [solutionsLatex, setSolutionsLatex] = useState<string | null>(null);
-  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     class: "",
@@ -84,10 +104,11 @@ export default function Form() {
   const canProceed = formData[currentField]?.trim() !== "";
 
   const handleInputChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [currentField]: value,
-    }));
+    setFormData((prev) => {
+      const newData = { ...prev, [currentField]: value };
+      currentFormData = newData; // Sync to exported variable
+      return newData;
+    });
   };
 
   const nextStep = () => {
@@ -100,6 +121,11 @@ export default function Form() {
     if (!isFirstStep) {
       setCurrentStep((prev) => prev - 1);
     }
+  };
+
+  const proceedToOptions = () => {
+    currentFormData = formData;
+    setShowOptions(true);
   };
 
   const renderInputField = () => {
@@ -158,9 +184,7 @@ export default function Form() {
     return null;
   };
 
-  const handleSubmit = async () => {
-    setGenerating(true);
-    setLoadingMessage("Generating test and solutions...");
+  const handleGenerateTest = async (): Promise<{ questions: string; solutions: string } | null> => {
     try {
       const response = await fetch("/api/generate-test", {
         method: "POST",
@@ -201,13 +225,13 @@ export default function Form() {
 
       setQuestionsLatex(cleanedQuestions);
       setSolutionsLatex(cleanedSolutions);
-      setShowDownloadOptions(true);
-      setGenerating(false);
-      setLoadingMessage("");
+
+      return { questions: cleanedQuestions, solutions: cleanedSolutions };
     } catch (error) {
       console.error("Error generating test:", error);
       setLoadingMessage("Error generating test. Please try again.");
       setTimeout(() => setGenerating(false), 2000);
+      return null;
     }
   };
 
@@ -277,34 +301,98 @@ export default function Form() {
   };
 
   const handleDownloadQuestions = async () => {
-    if (!questionsLatex) return;
     setGenerating(true);
+    setLoadingMessage("Generating questions PDF...");
+
+    let latex = questionsLatex;
+
+    // Generate test if not already generated
+    if (!latex) {
+      const result = await handleGenerateTest();
+      if (!result) {
+        setGenerating(false);
+        return;
+      }
+      latex = result.questions;
+    }
+
     setLoadingMessage("Converting questions to PDF...");
-    await generatePDF(questionsLatex, "test-paper");
+    await generatePDF(latex, "test-paper");
     setGenerating(false);
     setLoadingMessage("");
   };
 
   const handleDownloadSolutions = async () => {
-    if (!solutionsLatex) return;
     setGenerating(true);
+    setLoadingMessage("Generating solutions PDF...");
+
+    let latex = solutionsLatex;
+
+    // Generate test if not already generated
+    if (!latex) {
+      const result = await handleGenerateTest();
+      if (!result) {
+        setGenerating(false);
+        return;
+      }
+      latex = result.solutions;
+    }
+
     setLoadingMessage("Converting solutions to PDF...");
-    await generatePDF(solutionsLatex, "solutions");
+    await generatePDF(latex, "solutions");
     setGenerating(false);
     setLoadingMessage("");
+  };
+
+  const handleGenerateQuiz = async () => {
+    setGenerating(true);
+    setLoadingMessage("Generating interactive quiz...");
+
+    try {
+      const response = await fetch("/api/generate-quiz", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || "Failed to generate quiz");
+      }
+
+      // Store quiz data in exported variable
+      currentQuizData = data.quizQuestions;
+      currentFormData = formData;
+
+      setGenerating(false);
+      setLoadingMessage("");
+
+      // Redirect to quiz page
+      router.push("/quiz");
+    } catch (error) {
+      console.error("Error generating quiz:", error);
+      setLoadingMessage("Error generating quiz. Please try again.");
+      setTimeout(() => setGenerating(false), 2000);
+    }
   };
 
   const handleStartOver = () => {
     setQuestionsLatex(null);
     setSolutionsLatex(null);
-    setShowDownloadOptions(false);
-    setFormData({
+    setShowOptions(false);
+    const emptyData = {
       name: "",
       class: "",
       subject: "",
       topic: "",
       difficulty: "",
-    });
+    };
+    setFormData(emptyData);
+    currentFormData = emptyData;
+    currentQuizData = [];
     setCurrentStep(0);
   };
 
@@ -313,7 +401,7 @@ export default function Form() {
       if (e.key === "Enter" && canProceed) {
         e.preventDefault();
         if (isLastStep) {
-          handleSubmit();
+          proceedToOptions();
         } else {
           nextStep();
         }
@@ -350,7 +438,7 @@ export default function Form() {
     );
   }
 
-  if (showDownloadOptions) {
+  if (showOptions) {
     return (
       <div className="flex flex-col items-center justify-center mt-10">
         <motion.div
@@ -359,47 +447,43 @@ export default function Form() {
           className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200 w-full max-w-md"
         >
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
             <h2 className="text-2xl font-bold text-gray-800">
-              Test Generated Successfully!
+              Ready to Proceed!
             </h2>
             <p className="text-gray-600 mt-2">
-              Your test paper and solutions are ready to download.
+              Hi {formData.name}! Choose how you&apos;d like to practice for {formData.topic}.
             </p>
           </div>
 
           <div className="space-y-4">
             <button
+              onClick={handleGenerateQuiz}
+              className="w-full px-6 py-4 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+            >
+              Take Online Quiz
+            </button>
+
+            <button
               onClick={handleDownloadQuestions}
               className="w-full px-6 py-4 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Download Question Paper
+              Download Question Paper (PDF)
             </button>
 
             <button
               onClick={handleDownloadSolutions}
               className="w-full px-6 py-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Download Solutions
+              Download Solutions (PDF)
             </button>
           </div>
 
           <div className="mt-6 pt-6 border-t border-gray-200">
             <button
               onClick={handleStartOver}
-              className="w-full px-4 py-2 text-green-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="w-full px-4 py-2 text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              Generate Another Test
+              Start Over
             </button>
           </div>
         </motion.div>
@@ -446,14 +530,14 @@ export default function Form() {
 
           <button
             type="button"
-            onClick={isLastStep ? handleSubmit : nextStep}
+            onClick={isLastStep ? proceedToOptions : nextStep}
             disabled={!canProceed}
             className={`px-6 py-3 rounded-lg font-semibold transition-colors ${!canProceed
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
               : "bg-indigo-600 text-white hover:bg-indigo-700"
               }`}
           >
-            {isLastStep ? "Generate Test" : "Next"}
+            {isLastStep ? "Proceed" : "Next"}
           </button>
         </div>
       </div>
