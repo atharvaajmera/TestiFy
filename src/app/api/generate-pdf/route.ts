@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
             input: "import-latex",
             output_format: "pdf",
             engine: "texlive",
-            engine_version: "2023",
+            engine_version: "2024",
             timeout: 600,
           },
           "export-pdf": {

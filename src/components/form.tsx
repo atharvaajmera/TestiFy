@@ -65,7 +65,7 @@ const steps = [
   },
   {
     id: 4,
-    title: "Which topic?",
+    title: "Which topic (Include the book name for better results)?",
     field: "topic" as keyof FormData,
     placeholder: "Enter specific topic",
     type: "input",

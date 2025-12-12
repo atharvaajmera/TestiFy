@@ -33,10 +33,10 @@ async function generateTestLatexcode(
   formData: FormInputProps
 ): Promise<GeneratedTest> {
   const model = ai.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
     },
   });
 
@@ -61,6 +61,8 @@ CRITICAL REQUIREMENTS FOR BOTH DOCUMENTS:
 6. The question set should be a mix of different types like (MCQs, short answer, long answer), don't just stick to one format, each paper should have a unique set of problems
 7. The maximum marks should be corresponding to the choosen dificulty level, easy=15, medium=20, hard=30, the difficulty level of the questions should be relevant to the difficulty level of the paper
 8. Include the Name, Class (just like this-> Class-10..not like class-class-10), Subject, Maximum Marks, and the choosen "Difficulty" level in the beggining just like a typical school exam format where the details are given in the top middle and so on, take care of the spacing and formatting
+9. Only output the latex code that can be compiled directly on cloudconvert without any external additions and errors
+10. If the name of a book is mentioned in the topic field alongwith the chapter name, make sure to generate questions strictly from that book only
 
 FOR THE SOLUTION KEY:
 1. Title it as "Solution Key" instead of "Test"
@@ -71,17 +73,25 @@ FOR THE SOLUTION KEY:
 
 IMPORTANT FORMATTING RULES for maths QUESTIONS:
 1. Wrap ALL decimal numbers in math mode: \$0.25\$, \$3.45\$, etc.
-2. Use \\\\textrm{Rs.} instead of ₹ symbol
-3. Include these packages:
-   \\\\usepackage{amsmath}
-   \\\\usepackage{amssymb}
-   \\\\usepackage[T1]{fontenc}
-   \\\\usepackage{textcomp}
+2. Use \\textrm{Rs.} instead of ₹ symbol
+3. For MCQ options, use \\begin{enumerate} and \\item, NOT [a)] syntax
+4. Include these packages:
+   \\usepackage{amsmath}
+   \\usepackage{amssymb}
+   \\usepackage[T1]{fontenc}
+   \\usepackage{textcomp}
+   \\usepackage{enumerate}
 
 Example structure for each document:
 \\\\documentclass{article}
 \\\\usepackage[utf8]{inputenc}
 \\\\usepackage{amsmath}
+\\\\usepackage{amssymb}
+\\\\usepackage[T1]{fontenc}
+\\\\usepackage{textcomp}
+\\\\usepackage{enumerate}
+\\\\usepackage{geometry}
+\\\\geometry{a4paper, margin=1in}
 \\\\begin{document}
 \\\\title{${formData.subject} Test}
 \\\\author{${formData.name}}
