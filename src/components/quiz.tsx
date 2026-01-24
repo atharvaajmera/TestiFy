@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { Trophy, Sparkles, ChevronRight } from "lucide-react";
 
 interface QuizQuestion {
     question: string;
@@ -68,148 +68,166 @@ export default function Quiz({ quizData, formData }: QuizProps) {
 
     if (quizCompleted) {
         const percentage = Math.round((score / totalQuestions) * 100);
+        const isPerfect = percentage === 100;
+        const isGood = percentage >= 70;
+
         return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full text-center"
-                >
-                    <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-3xl font-bold text-white">{percentage}%</span>
+            <div className="min-h-screen bg-[#FDFCF8] flex items-center justify-center p-6">
+                <div className="bg-white rounded-3xl shadow-xl shadow-indigo-100/50 p-10 max-w-lg w-full text-center">
+                    <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200/50">
+                        {isPerfect ? (
+                            <Trophy className="w-16 h-16 text-amber-200" />
+                        ) : (
+                            <Sparkles className="w-16 h-16 text-white" />
+                        )}
                     </div>
 
-                    <h2 className="text-3xl font-bold text-gray-800 mb-2">Quiz Completed!</h2>
-                    <p className="text-gray-600 mb-6">Great job, {formData.name}!</p>
+                    <h2 className="text-4xl font-bold text-slate-800 mb-3">
+                        {isPerfect ? "Perfect Score! 🎉" : isGood ? "Well Done! 🌟" : "Keep Practicing! 💪"}
+                    </h2>
+                    <p className="text-xl text-slate-600 mb-10">Great job, {formData.name}!</p>
 
-                    <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                        <p className="text-lg">
-                            You scored <span className="font-bold text-indigo-600">{score}</span> out of{" "}
-                            <span className="font-bold">{totalQuestions}</span> questions
+                    <div className="bg-indigo-50 rounded-3xl p-8 mb-8 shadow-lg shadow-indigo-100/30">
+                        <div className="text-6xl font-bold text-indigo-500 mb-3">{percentage}%</div>
+                        <p className="text-lg text-slate-600">
+                            <span className="font-bold text-slate-800">{score}</span> out of{" "}
+                            <span className="font-bold text-slate-800">{totalQuestions}</span> correct
                         </p>
                     </div>
 
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
                         <button
                             onClick={handleRestartQuiz}
-                            className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+                            className="flex-1 px-6 py-4 bg-indigo-500 text-white rounded-3xl font-bold text-lg shadow-lg shadow-indigo-200/50 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-200/60 transition-all"
                         >
                             Try Again
                         </button>
                         <button
                             onClick={() => router.push("/")}
-                            className="flex-1 px-6 py-3 border-2 border-indigo-600 text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors"
+                            className="flex-1 px-6 py-4 bg-white text-indigo-500 rounded-3xl font-bold text-lg shadow-lg shadow-slate-200/50 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-200/60 transition-all ring-2 ring-indigo-200"
                         >
                             New Quiz
                         </button>
                     </div>
-                </motion.div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex flex-col">
-                <div className="max-w-2xl mx-auto p-4">
-                    <div className="text-center mb-2">
-                        <span className="text-sm font-medium text-gray-700">
-                            Question {currentQuestionIndex + 1} of {totalQuestions}
+        <div className="min-h-screen bg-[#FDFCF8] flex flex-col py-6">
+            {/* Progress Section */}
+            <div className="max-w-2xl mx-auto w-full px-6 mb-4">
+                <div className="bg-white rounded-3xl shadow-lg shadow-indigo-100/30 p-4">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-sm font-bold text-indigo-500 bg-indigo-50 px-4 py-2 rounded-full">
+                            {currentQuestionIndex + 1} / {totalQuestions}
+                        </span>
+                        <span className="text-sm font-bold text-slate-600">
+                            Score: <span className="text-indigo-500">{score}</span>
                         </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                        <motion.div
-                            className="bg-indigo-600 h-2 rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            transition={{ duration: 0.3 }}
+                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div
+                            className="bg-gradient-to-r from-indigo-400 to-indigo-600 h-full rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${progress}%` }}
                         />
                     </div>
                 </div>
+            </div>
 
-            <div className="flex-1 flex items-center justify-center p-4">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentQuestionIndex}
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -50 }}
-                        transition={{ duration: 0.3 }}
-                        className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full"
-                    >
-                        <h2 className="text-2xl font-bold text-gray-800 mb-8">
+            {/* Question Card */}
+            <div className="flex-1 flex items-center justify-center px-6">
+                <div className="bg-white rounded-3xl shadow-xl shadow-indigo-100/50 p-6 max-w-2xl w-full">
+                    {/* Question Header */}
+                    <div className="mb-6 text-center">
+                        <h2 className="text-2xl font-bold text-slate-800 leading-relaxed">
                             {currentQuestion.question}
                         </h2>
+                    </div>
 
-                        <div className="space-y-4">
-                            {currentQuestion.options.map((option, index) => {
-                                const isSelected = selectedAnswer === option;
-                                const isCorrect = option === currentQuestion.answer;
+                    {/* Options */}
+                    <div className="space-y-3 mb-6">
+                        {currentQuestion.options.map((option, index) => {
+                            const isSelected = selectedAnswer === option;
+                            const isCorrect = option === currentQuestion.answer;
+                            const optionLetter = String.fromCharCode(65 + index);
 
-                                let optionClass = "border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50";
+                            let cardClasses = "w-full p-4 rounded-3xl text-left transition-all duration-200 cursor-pointer bg-white shadow-sm text-slate-700";
+                            let letterClasses = "w-10 h-10 rounded-2xl flex items-center justify-center text-base font-bold flex-shrink-0";
 
-                                if (showAnswer) {
-                                    if (isCorrect) {
-                                        optionClass = "border-2 border-green-500 bg-green-50";
-                                    } else if (isSelected && !isCorrect) {
-                                        optionClass = "border-2 border-red-500 bg-red-50";
-                                    } else {
-                                        optionClass = "border-2 border-gray-200 opacity-50";
-                                    }
-                                } else if (isSelected) {
-                                    optionClass = "border-2 border-indigo-600 bg-indigo-50";
+                            if (showAnswer) {
+                                if (isCorrect) {
+                                    cardClasses = "w-full p-4 rounded-3xl text-left transition-all duration-200 bg-green-50 shadow-md shadow-green-100/50 text-green-700 border-2 border-green-500";
+                                    letterClasses += " bg-green-500 text-white";
+                                } else if (isSelected && !isCorrect) {
+                                    cardClasses = "w-full p-4 rounded-3xl text-left transition-all duration-200 bg-red-50 shadow-md shadow-red-100/50 text-red-700 border-2 border-red-500";
+                                    letterClasses += " bg-red-500 text-white";
+                                } else {
+                                    cardClasses = "w-full p-4 rounded-3xl text-left transition-all duration-200 bg-white opacity-40 text-slate-500";
+                                    letterClasses += " bg-slate-100 text-slate-400";
                                 }
+                            } else if (isSelected) {
+                                cardClasses = "w-full p-4 rounded-3xl text-left transition-all duration-200 bg-indigo-50 shadow-md shadow-indigo-100/50 text-indigo-700 -translate-y-0.5 border-2 border-indigo-500";
+                                letterClasses += " bg-indigo-500 text-white";
+                            } else {
+                                cardClasses += " hover:shadow-md hover:-translate-y-0.5 hover:text-indigo-600";
+                                letterClasses += " bg-slate-100 text-slate-600";
+                            }
 
-                                return (
-                                    <button
-                                        key={index}
-                                        onClick={() => handleOptionSelect(option)}
-                                        disabled={showAnswer}
-                                        className={`w-full p-4 rounded-xl text-left transition-all ${optionClass}`}
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium">
-                                                {String.fromCharCode(65 + index)}
-                                            </span>
-                                            <span className="text-gray-800">{option}</span>
-                                            {showAnswer && isCorrect && (
-                                                <svg className="w-6 h-6 text-green-500 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                            )}
-                                            {showAnswer && isSelected && !isCorrect && (
-                                                <svg className="w-6 h-6 text-red-500 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            )}
+                            return (
+                                <button
+                                    key={index}
+                                    onClick={() => handleOptionSelect(option)}
+                                    disabled={showAnswer}
+                                    className={cardClasses}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={letterClasses}>
+                                            {optionLetter}
                                         </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                        <span className="text-base font-medium flex-1">
+                                            {option}
+                                        </span>
+                                        {showAnswer && isCorrect && (
+                                            <svg className="w-6 h-6 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        )}
+                                        {showAnswer && isSelected && !isCorrect && (
+                                            <svg className="w-6 h-6 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
 
-                        <div className="mt-8 flex justify-end">
-                            {!showAnswer ? (
-                                <button
-                                    onClick={handleSubmitAnswer}
-                                    disabled={!selectedAnswer}
-                                    className={`px-8 py-3 rounded-xl font-semibold transition-colors ${selectedAnswer
-                                        ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                        }`}
-                                >
-                                    Submit Answer
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={handleNextQuestion}
-                                    className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
-                                >
-                                    {currentQuestionIndex < totalQuestions - 1 ? "Next Question" : "See Results"}
-                                </button>
-                            )}
-                        </div>
-                    </motion.div>
-                </AnimatePresence>
+                    <div className="flex justify-center">
+                        {!showAnswer ? (
+                            <button
+                                onClick={handleSubmitAnswer}
+                                disabled={!selectedAnswer}
+                                className={`px-8 py-3 rounded-3xl font-bold text-base transition-all ${selectedAnswer
+                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-200/60"
+                                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                    }`}
+                            >
+                                Check Answer
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleNextQuestion}
+                                className="px-8 py-3 bg-indigo-500 text-white rounded-3xl font-bold text-base shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-200/60 transition-shadow flex items-center gap-2"
+                            >
+                                {currentQuestionIndex < totalQuestions - 1 ? "Next Question" : "See Results"}
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

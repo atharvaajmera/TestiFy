@@ -23,46 +23,54 @@ export default function Home() {
 
   const dotPattern = (color: string) => ({
     backgroundImage: `radial-gradient(circle, ${color} 1px, transparent 1px)`,
-    backgroundSize: '16px 16px',
+    backgroundSize: '20px 20px',
   });
 
   return (
-    <div
-      className="relative bg-white dark:bg-black min-h-screen group"
-      onMouseMove={handleMouseMove}
-    >
-      <div
-        className="absolute inset-0 pointer-events-none opacity-70"
-        style={dotPattern('rgb(212 212 212)')}
-      />
-      <div
-        className="absolute inset-0 dark:opacity-70 opacity-0 pointer-events-none"
-        style={dotPattern('rgb(38 38 38)')}
-      />
-      <motion.div
-        className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
-        style={{
-          ...dotPattern('rgb(99 102 241)'),
-          WebkitMaskImage: useMotionTemplate`
-            radial-gradient(
-              200px circle at ${mouseX}px ${mouseY}px,
-              black 0%,
-              transparent 100%
-            )
-          `,
-          maskImage: useMotionTemplate`
-            radial-gradient(
-              200px circle at ${mouseX}px ${mouseY}px,
-              black 0%,
-              transparent 100%
-            )
-          `,
-        }}
-      />
+    <div className="relative bg-white dark:bg-black min-h-screen">
+      <main className="relative z-10 min-h-screen grid grid-cols-1 lg:grid-cols-2 gap-8 items-start px-8 py-0">
 
-      <main className="relative z-10 min-h-screen flex flex-col items-center">
-        <div className="text-center">
-          <HeroHighlight containerClassName="bg-transparent">
+        <div
+          className="relative flex flex-col items-center lg:items-start justify-start space-y-6 group min-h-screen pt-8"
+          onMouseMove={handleMouseMove}
+        >
+          <div
+            className="absolute inset-0 pointer-events-none opacity-70 -mx-8 lg:-ml-8 lg:mr-0"
+            style={dotPattern('rgb(170 170 170)')}
+          />
+          <div
+            className="absolute inset-0 dark:opacity-70 opacity-0 pointer-events-none -mx-8 lg:-ml-8 lg:mr-0"
+            style={dotPattern('rgb(38 38 38)')}
+          />
+          <motion.div
+            className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100 -mx-8 lg:-ml-8 lg:mr-0"
+            style={{
+              ...dotPattern('rgb(99 102 241)'),
+              WebkitMaskImage: useMotionTemplate`
+                radial-gradient(
+                  200px circle at ${mouseX}px ${mouseY}px,
+                  black 0%,
+                  transparent 100%
+                )
+              `,
+              maskImage: useMotionTemplate`
+                radial-gradient(
+                  200px circle at ${mouseX}px ${mouseY}px,
+                  black 0%,
+                  transparent 100%
+                )
+              `,
+            }}
+          />
+
+          <Image
+            src="/favicon.ico"
+            alt="TestiFy Logo"
+            width={120}
+            height={120}
+            className="shadow-lg rounded-lg relative z-10"
+          />
+          <HeroHighlight containerClassName="bg-transparent relative z-10">
             <motion.h1
               initial={{
                 opacity: 0,
@@ -76,7 +84,7 @@ export default function Home() {
                 duration: 0.5,
                 ease: [0.4, 0.0, 0.2, 1],
               }}
-              className="text-2xl md:text-4xl lg:text-5xl font-bold text-neutral-700 dark:text-white max-w-4xl leading-relaxed lg:leading-snug text-center"
+              className="text-2xl md:text-4xl lg:text-5xl font-bold text-neutral-700 dark:text-white max-w-2xl leading-relaxed lg:leading-snug text-center lg:text-left"
             >
               Create and practice test papers for free at{" "}
               <Highlight className="text-black dark:text-white">
@@ -85,11 +93,11 @@ export default function Home() {
             </motion.h1>
           </HeroHighlight>
         </div>
-        <Image src="/favicon.ico" alt="TestiFy Mockup" width={100} height={100} className="mt- shadow-lg rounded-lg" />
 
-
-        <div className="flex flex-col items-center justify-center mt-10 bg-white/80 dark:bg-black/80 backdrop-blur-sm p-6 rounded-lg w-[400px]">
-          <Form />
+        <div className="flex items-start justify-center pt-8">
+          <div className="">
+            <Form />
+          </div>
         </div>
       </main>
     </div>

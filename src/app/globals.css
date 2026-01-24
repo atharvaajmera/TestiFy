@@ -59,16 +59,17 @@ iframe[title*="vercel" i] {
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --background: 251 251 254;
+  --buttons: #919df1;
+  --foreground: 4 3 22;
+  --card: 251 251 254;
+  --card-foreground: 4 3 22;
+  --popover: 251 251 254;
+  --popover-foreground: 4 3 22;
+  --primary: 36 57 212;
+  --primary-foreground: 251 251 254;
+  --secondary: 208 191 227;
+  --secondary-foreground: 4 3 22;
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
@@ -93,16 +94,16 @@ iframe[title*="vercel" i] {
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+  --background: 4 3 22;
+  --foreground: 251 251 254;
+  --card: 26 26 26;
+  --card-foreground: 251 251 254;
+  --popover: 26 26 26;
+  --popover-foreground: 251 251 254;
+  --primary: 36 57 212;
+  --primary-foreground: 251 251 254;
+  --secondary: 208 191 227;
+  --secondary-foreground: 4 3 22;
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
@@ -133,4 +134,29 @@ iframe[title*="vercel" i] {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Shake animation for wrong answers */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-10px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(10px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
 }

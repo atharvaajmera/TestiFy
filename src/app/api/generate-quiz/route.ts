@@ -21,47 +21,98 @@ export async function GET() {
 }
 
 async function generateQuizQuestions(
-  formData: FormInputProps
+  formData: FormInputProps,
 ): Promise<string[]> {
   const model = ai.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
     },
   });
-  const prompt = `Generate a json for quiz questions with answers based on the following parameters:
+
+  // Determine number of questions based on difficulty
+  let numQuestions;
+  switch (formData.difficulty.toLowerCase()) {
+    case "easy":
+      numQuestions = 5;
+      break;
+    case "medium":
+      numQuestions = 8;
+      break;
+    case "hard":
+      numQuestions = 10;
+      break;
+    default:
+      numQuestions = 7;
+  }
+
+  const prompt = `Generate exactly ${numQuestions} quiz questions in valid JSON format based on the following parameters:
 Name: ${formData.name}
 Class: ${formData.class}
 Subject: ${formData.subject}
 Topic: ${formData.topic}
 Difficulty Level: ${formData.difficulty}
-The difficulty and the number of questions should be corresponding, like easy mode means less questions plus easier questions, while hard mode means more questions plus harder questions.
-The output should be only a JSON array of objects, each containing "question" and four "options" fields. Also there should be a correct "answer" field indicating the correct option. There should be no markdown formatting or any other text outside the JSON array.`;
 
-  const response = await model.generateContent(prompt);
-  let text = response.response.text();
+IMPORTANT: Return ONLY a valid JSON array. Each object must have:
+- "question": string
+- "options": array of exactly 4 strings
+- "answer": string (must match one of the options exactly)
 
-  // Clean up the response - remove markdown code blocks if present
-  text = text.trim();
-  if (text.startsWith("```json")) {
-    text = text.slice(7); // Remove ```json
-  } else if (text.startsWith("```")) {
-    text = text.slice(3); // Remove ```
+Example format:
+[
+  {
+    "question": "What is 2+2?",
+    "options": ["3", "4", "5", "6"],
+    "answer": "4"
   }
-  if (text.endsWith("```")) {
-    text = text.slice(0, -3); // Remove trailing ```
-  }
-  text = text.trim();
+]
 
-  try {
-    const quizQuestions = JSON.parse(text);
-    return quizQuestions;
-  } catch (error) {
-    console.error("Error parsing quiz questions JSON:", error);
-    console.error("Raw response:", text);
-    throw new Error("Failed to parse quiz questions from AI response");
+Generate exactly ${numQuestions} questions. Do not include any markdown formatting, explanations, or text outside the JSON array.`;
+
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const response = await model.generateContent(prompt);
+      let text = response.response.text();
+
+      text = text.trim();
+      if (text.startsWith("```json")) {
+        text = text.slice(7);
+      } else if (text.startsWith("```")) {
+        text = text.slice(3);
+      }
+      if (text.endsWith("```")) {
+        text = text.slice(0, -3);
+      }
+      text = text.trim();
+
+      const quizQuestions = JSON.parse(text);
+
+      if (!Array.isArray(quizQuestions) || quizQuestions.length === 0) {
+        throw new Error("Invalid response format: not an array or empty");
+      }
+
+      return quizQuestions;
+    } catch (error) {
+      retries--;
+      console.error(`Attempt failed (${retries} retries left):`, error);
+
+      if (retries === 0) {
+        console.error(
+          "Error parsing quiz questions JSON after all retries:",
+          error,
+        );
+        throw new Error(
+          "Failed to generate valid quiz questions. Please try again.",
+        );
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
   }
+
+  throw new Error("Failed to generate quiz questions");
 }
 
 export async function POST(request: NextRequest) {
@@ -79,7 +130,7 @@ export async function POST(request: NextRequest) {
         success: false,
         message: "Failed to generate quiz questions",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
