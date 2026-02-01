@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trophy, Sparkles, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 interface QuizQuestion {
     question: string;
@@ -74,16 +74,8 @@ export default function Quiz({ quizData, formData }: QuizProps) {
         return (
             <div className="min-h-screen bg-[#FDFCF8] flex items-center justify-center p-6">
                 <div className="bg-white rounded-3xl shadow-xl shadow-indigo-100/50 p-10 max-w-lg w-full text-center">
-                    <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200/50">
-                        {isPerfect ? (
-                            <Trophy className="w-16 h-16 text-amber-200" />
-                        ) : (
-                            <Sparkles className="w-16 h-16 text-white" />
-                        )}
-                    </div>
-
                     <h2 className="text-4xl font-bold text-slate-800 mb-3">
-                        {isPerfect ? "Perfect Score! 🎉" : isGood ? "Well Done! 🌟" : "Keep Practicing! 💪"}
+                        Quiz Results
                     </h2>
                     <p className="text-xl text-slate-600 mb-10">Great job, {formData.name}!</p>
 

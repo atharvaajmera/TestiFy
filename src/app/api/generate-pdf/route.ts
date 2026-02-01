@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  checkSystemAvailability,
+  incrementSystemUsage,
+} from "../../../../middleware";
 
 interface LaTeXToPDFRequest {
   latexContent: string;
@@ -33,6 +37,18 @@ interface CloudConvertJobResponse {
 }
 
 export async function POST(request: NextRequest) {
+  const systemAvailable = await checkSystemAvailability("cloudconvert");
+
+  if (!systemAvailable) {
+    return NextResponse.json(
+      {
+        error:
+          "The free limit has been reached for today, please try again tomorrow.",
+      },
+      { status: 503 },
+    );
+  }
+
   try {
     const API_KEY = process.env.CLOUDCONVERT_API_KEY;
 
@@ -40,7 +56,7 @@ export async function POST(request: NextRequest) {
       console.error("CloudConvert API key not configured");
       return NextResponse.json(
         { error: "CloudConvert API key not configured" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -50,7 +66,7 @@ export async function POST(request: NextRequest) {
       console.error("LaTeX content is required");
       return NextResponse.json(
         { error: "LaTeX content is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -61,30 +77,30 @@ export async function POST(request: NextRequest) {
     console.log("Content length:", body.latexContent.length);
     console.log(
       "Content preview (first 200 chars):",
-      body.latexContent.substring(0, 200)
+      body.latexContent.substring(0, 200),
     );
     console.log(
       "Content preview (last 200 chars):",
-      body.latexContent.substring(Math.max(0, body.latexContent.length - 200))
+      body.latexContent.substring(Math.max(0, body.latexContent.length - 200)),
     );
     console.log(
       "Character codes (first 50):",
       Array.from(body.latexContent.substring(0, 50))
         .map((c) => c.charCodeAt(0))
-        .join(",")
+        .join(","),
     );
     console.log("Contains backslashes:", body.latexContent.includes("\\"));
     console.log(
       "Contains curly braces:",
-      body.latexContent.includes("{") && body.latexContent.includes("}")
+      body.latexContent.includes("{") && body.latexContent.includes("}"),
     );
     console.log(
       "Line break type:",
       body.latexContent.includes("\r\n")
         ? "CRLF"
         : body.latexContent.includes("\n")
-        ? "LF"
-        : "None detected"
+          ? "LF"
+          : "None detected",
     );
     console.log("Full content:");
     console.log(body.latexContent);
@@ -126,7 +142,7 @@ export async function POST(request: NextRequest) {
       console.error("Failed to create CloudConvert job:", errorData);
       return NextResponse.json(
         { error: "Failed to create conversion job", details: errorData },
-        { status: jobResponse.status }
+        { status: jobResponse.status },
       );
     }
 
@@ -140,14 +156,14 @@ export async function POST(request: NextRequest) {
     console.log("Using import/raw - skipping upload step");
 
     const importTask = jobData.data.tasks.find(
-      (task) => task.name === "import-latex"
+      (task) => task.name === "import-latex",
     );
 
     if (importTask?.status === "error") {
       console.error("Import task failed:", importTask.message);
       return NextResponse.json(
         { error: "Import task failed", details: importTask.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -172,7 +188,7 @@ export async function POST(request: NextRequest) {
             headers: {
               Authorization: `Bearer ${API_KEY}`,
             },
-          }
+          },
         );
 
         if (!statusResponse.ok) {
@@ -187,7 +203,7 @@ export async function POST(request: NextRequest) {
                 error: "Failed to check job status repeatedly",
                 details: errorText,
               },
-              { status: 500 }
+              { status: 500 },
             );
           }
           continue;
@@ -198,14 +214,14 @@ export async function POST(request: NextRequest) {
         attempts++;
 
         console.log(
-          `Job status: ${jobStatus} (attempt ${attempts}/${maxAttempts})`
+          `Job status: ${jobStatus} (attempt ${attempts}/${maxAttempts})`,
         );
 
         statusData.data.tasks.forEach((task) => {
           if (task.status === "error") {
             console.error(
               `Task ${task.name} failed:`,
-              task.message || "No error message"
+              task.message || "No error message",
             );
           }
         });
@@ -216,7 +232,7 @@ export async function POST(request: NextRequest) {
           console.log("-----------------------------------------");
 
           const exportTask = statusData.data.tasks.find(
-            (task) => task.name === "export-pdf"
+            (task) => task.name === "export-pdf",
           );
 
           if (exportTask?.result?.files?.[0]) {
@@ -229,11 +245,13 @@ export async function POST(request: NextRequest) {
               console.error("Failed to download PDF from CloudConvert");
               return NextResponse.json(
                 { error: "Failed to download generated PDF" },
-                { status: 500 }
+                { status: 500 },
               );
             }
 
             const pdfBuffer = await pdfResponse.arrayBuffer();
+
+            await incrementSystemUsage("cloudconvert");
 
             return new NextResponse(pdfBuffer, {
               status: 200,
@@ -250,21 +268,21 @@ export async function POST(request: NextRequest) {
           } else {
             console.error(
               "PDF file not found in export task result:",
-              exportTask
+              exportTask,
             );
             return NextResponse.json(
               {
                 error: "PDF file not found in conversion result",
                 details: exportTask,
               },
-              { status: 500 }
+              { status: 500 },
             );
           }
         }
 
         if (jobStatus === "error") {
           const errorTasks = statusData.data.tasks.filter(
-            (task) => task.status === "error"
+            (task) => task.status === "error",
           );
           console.error("Conversion job failed. Error tasks:", errorTasks);
           return NextResponse.json(
@@ -273,7 +291,7 @@ export async function POST(request: NextRequest) {
               details: errorTasks,
               allTasks: statusData.data.tasks,
             },
-            { status: 500 }
+            { status: 500 },
           );
         }
       } catch (pollError) {
@@ -282,7 +300,7 @@ export async function POST(request: NextRequest) {
         if (attempts >= maxAttempts) {
           return NextResponse.json(
             { error: "Failed to poll job status", details: String(pollError) },
-            { status: 500 }
+            { status: 500 },
           );
         }
       }
@@ -291,7 +309,7 @@ export async function POST(request: NextRequest) {
     if (jobStatus !== "finished") {
       console.error(
         "Job did not complete within timeout. Final status:",
-        jobStatus
+        jobStatus,
       );
       return NextResponse.json(
         {
@@ -299,7 +317,7 @@ export async function POST(request: NextRequest) {
           finalStatus: jobStatus,
           attempts: attempts,
         },
-        { status: 408 }
+        { status: 408 },
       );
     }
   } catch (error) {
@@ -316,7 +334,7 @@ export async function POST(request: NextRequest) {
         error: "Internal server error during conversion",
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

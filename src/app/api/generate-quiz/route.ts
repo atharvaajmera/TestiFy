@@ -1,5 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse, NextRequest } from "next/server";
+import {
+  checkSystemAvailability,
+  incrementSystemUsage,
+} from "../../../../middleware";
 
 const apiKey = process.env.GEMINI_API_KEY || "";
 
@@ -15,7 +19,7 @@ export interface FormInputProps {
 
 export async function GET() {
   return NextResponse.json({
-    message: "API route is working!",
+    message: "API route is working.",
     success: true,
   });
 }
@@ -116,9 +120,18 @@ Generate exactly ${numQuestions} questions. Do not include any markdown formatti
 }
 
 export async function POST(request: NextRequest) {
+  const systemAvailable = await checkSystemAvailability("gemini");
+
+  if (!systemAvailable) {
+    return NextResponse.json(
+      { error: "The free limit has been reached for today, please try again tomorrow." },
+      { status: 503 } 
+    );
+  }
   try {
     const formData: FormInputProps = await request.json();
     const quizQuestions = await generateQuizQuestions(formData);
+    await incrementSystemUsage("gemini");
     return NextResponse.json({
       success: true,
       quizQuestions,

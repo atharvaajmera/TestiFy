@@ -1,5 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse, NextRequest } from "next/server";
+import {
+  checkSystemAvailability,
+  incrementSystemUsage,
+} from "../../../../middleware";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
@@ -30,7 +34,7 @@ interface GeneratedTest {
 }
 
 async function generateTestLatexcode(
-  formData: FormInputProps
+  formData: FormInputProps,
 ): Promise<GeneratedTest> {
   const model = ai.getGenerativeModel({
     model: "gemini-2.5-flash",
@@ -75,12 +79,15 @@ IMPORTANT FORMATTING RULES for maths QUESTIONS:
 1. Wrap ALL decimal numbers in math mode: \$0.25\$, \$3.45\$, etc.
 2. Use \\textrm{Rs.} instead of ₹ symbol
 3. For MCQ options, use \\begin{enumerate} and \\item, NOT [a)] syntax
-4. Include these packages:
+4. AVOID using tikzpicture environments - describe diagrams in text instead, or use simple ASCII representations
+5. If you absolutely must use tikzpicture, include \\usepackage{tikz} in the preamble
+6. Include these packages:
    \\usepackage{amsmath}
    \\usepackage{amssymb}
    \\usepackage[T1]{fontenc}
    \\usepackage{textcomp}
    \\usepackage{enumerate}
+   \\usepackage{tikz}
 
 Example structure for each document:
 \\\\documentclass{article}
@@ -91,6 +98,7 @@ Example structure for each document:
 \\\\usepackage{textcomp}
 \\\\usepackage{enumerate}
 \\\\usepackage{geometry}
+\\\\usepackage{tikz}
 \\\\geometry{a4paper, margin=1in}
 \\\\begin{document}
 \\\\title{${formData.subject} Test}
@@ -131,17 +139,30 @@ Example structure for each document:
 // }
 
 export async function POST(request: NextRequest) {
+  const systemAvailable = await checkSystemAvailability("gemini");
+
+  if (!systemAvailable) {
+    return NextResponse.json(
+      {
+        error:
+          "The free limit has been reached for today, please try again tomorrow.",
+      },
+      { status: 503 },
+    );
+  }
+
   try {
     const formData: FormInputProps = await request.json();
 
     console.log("Received form data:", formData);
 
-    const { questionsLatex, solutionsLatex } = await generateTestLatexcode(
-      formData
-    );
+    const { questionsLatex, solutionsLatex } =
+      await generateTestLatexcode(formData);
 
     console.log("Generated Questions LaTeX:", questionsLatex.substring(0, 200));
     console.log("Generated Solutions LaTeX:", solutionsLatex.substring(0, 200));
+
+    await incrementSystemUsage("gemini");
 
     return NextResponse.json({
       success: true,
@@ -160,7 +181,7 @@ export async function POST(request: NextRequest) {
             "The AI service is temporarily unavailable. Please try again in a few minutes.",
           error: "SERVICE_UNAVAILABLE",
         },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -170,7 +191,7 @@ export async function POST(request: NextRequest) {
         message: errorMessage || "Failed to generate test paper",
         error: "GENERATION_FAILED",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
