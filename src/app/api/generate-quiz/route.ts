@@ -1,9 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse, NextRequest } from "next/server";
-import {
-  checkSystemAvailability,
-  incrementSystemUsage,
-} from "../../../../middleware";
+import { checkSystemAvailability, incrementSystemUsage } from "@/lib/redis";
 
 const apiKey = process.env.GEMINI_API_KEY || "";
 

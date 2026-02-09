@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  checkSystemAvailability,
-  incrementSystemUsage,
-} from "../../../../middleware";
+import { checkSystemAvailability, incrementSystemUsage } from "@/lib/redis";
 
 interface LaTeXToPDFRequest {
   latexContent: string;
