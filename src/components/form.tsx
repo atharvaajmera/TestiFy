@@ -260,6 +260,19 @@ export default function Form() {
   };
 
   const generatePDF = async (latexCode: string, filePrefix: string) => {
+    const nav = navigator as Navigator & { userActivation?: { isActive: boolean } };
+    const canPreview =
+      nav.userActivation?.isActive === true &&
+      !(window.matchMedia?.("(pointer: coarse)")?.matches ?? false);
+
+    let pdfTab: Window | null = null;
+    if (canPreview) {
+      pdfTab = window.open("about:blank", "_blank");
+      pdfTab?.document.write(
+        "<body style=\"font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#334155\">Preparing your PDF&hellip;</body>",
+      );
+    }
+
     try {
       const response = await fetch("/api/generate-pdf", {
         method: "POST",
@@ -292,33 +305,31 @@ export default function Form() {
       const timestamp = Date.now();
       const uniqueFilename = `${filePrefix}-${timestamp}.pdf`;
 
-      // Use a more reliable download approach for mobile
+      // Download via a temporary anchor — reliable on both desktop and mobile.
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
       a.download = uniqueFilename;
 
-      // Add to DOM, click, and remove
+      // Add to DOM, click, remove — no setTimeout nesting needed.
       document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
-      // Small delay to ensure DOM update
-      setTimeout(() => {
-        a.click();
+      // Show the PDF in the tab we opened during the click gesture.
+      if (pdfTab && !pdfTab.closed) {
+        pdfTab.location.href = url;
+      } else if (pdfTab) {
+        pdfTab.close();
+      }
 
-        // Try opening in new tab as well (for desktop)
-        setTimeout(() => {
-          window.open(url, '_blank');
-        }, 100);
-
-        // Cleanup after download starts
-        setTimeout(() => {
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-          console.log("PDF download complete");
-        }, 2000);
-      }, 100);
+      // Keep the blob alive long enough for slow devices to finish
+      // downloading/previewing before cleanup.
+      console.log("PDF download complete");
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
 
     } catch (error) {
+      pdfTab?.close();
       console.error("Error generating PDF:", error);
       alert("Error generating PDF. Please try again.");
     }

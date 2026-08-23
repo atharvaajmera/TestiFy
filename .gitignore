@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# local npm cache (used for sandboxed installs)
+/.npm-cache/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
